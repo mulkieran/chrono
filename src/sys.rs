@@ -45,26 +45,6 @@ impl Timespec {
             SystemTime::now().duration_since(UNIX_EPOCH).expect("system time before Unix epoch");
         Timespec { sec: st.as_secs() as i64, nsec: st.subsec_nanos() as i32 }
     }
-
-    /// Converts this timespec into the system's local time.
-    pub fn local(self) -> Tm {
-        let mut tm = Tm {
-            tm_sec: 0,
-            tm_min: 0,
-            tm_hour: 0,
-            tm_mday: 0,
-            tm_mon: 0,
-            tm_year: 0,
-            tm_wday: 0,
-            tm_yday: 0,
-            tm_isdst: 0,
-            tm_utcoff: 0,
-            tm_nsec: 0,
-        };
-        inner::time_to_local_tm(self.sec, &mut tm);
-        tm.tm_nsec = self.nsec;
-        tm
-    }
 }
 
 /// Holds a calendar date and time broken down into its components (year, month,

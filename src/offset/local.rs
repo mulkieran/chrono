@@ -4,7 +4,7 @@
 //! The local (system) time zone.
 
 #[cfg(not(all(target_arch = "wasm32", not(target_os = "wasi"), feature = "wasmbind")))]
-use sys::{self, Timespec};
+use sys;
 
 use super::fixed::FixedOffset;
 use super::{LocalResult, TimeZone};
@@ -91,17 +91,6 @@ fn datetime_to_timespec(d: &NaiveDateTime, local: bool) -> sys::Timespec {
 pub struct Local;
 
 impl Local {
-    /// Returns a `Date` which corresponds to the current date.
-    pub fn today() -> Date<Local> {
-        Local::now().date()
-    }
-
-    /// Returns a `DateTime` which corresponds to the current date.
-    #[cfg(not(all(target_arch = "wasm32", not(target_os = "wasi"), feature = "wasmbind")))]
-    pub fn now() -> DateTime<Local> {
-        tm_to_datetime(Timespec::now().local())
-    }
-
     /// Returns a `DateTime` which corresponds to the current date.
     #[cfg(all(target_arch = "wasm32", not(target_os = "wasi"), feature = "wasmbind"))]
     pub fn now() -> DateTime<Local> {
@@ -156,18 +145,6 @@ impl TimeZone for Local {
         LocalResult::Single(DateTime::from_utc(local, offset))
     }
 
-    #[cfg(not(all(target_arch = "wasm32", not(target_os = "wasi"), feature = "wasmbind")))]
-    fn from_local_datetime(&self, local: &NaiveDateTime) -> LocalResult<DateTime<Local>> {
-        let timespec = datetime_to_timespec(local, true);
-
-        // datetime_to_timespec completely ignores leap seconds, so we need to adjust for them
-        let mut tm = timespec.local();
-        assert_eq!(tm.tm_nsec, 0);
-        tm.tm_nsec = local.nanosecond() as i32;
-
-        LocalResult::Single(tm_to_datetime(tm))
-    }
-
     fn from_utc_date(&self, utc: &NaiveDate) -> Date<Local> {
         let midnight = self.from_utc_datetime(&utc.and_hms(0, 0, 0));
         Date::from_utc(*utc, *midnight.offset())
@@ -178,18 +155,6 @@ impl TimeZone for Local {
         // Get the offset from the js runtime
         let offset = FixedOffset::west((js_sys::Date::new_0().get_timezone_offset() as i32) * 60);
         DateTime::from_utc(*utc, offset)
-    }
-
-    #[cfg(not(all(target_arch = "wasm32", not(target_os = "wasi"), feature = "wasmbind")))]
-    fn from_utc_datetime(&self, utc: &NaiveDateTime) -> DateTime<Local> {
-        let timespec = datetime_to_timespec(utc, false);
-
-        // datetime_to_timespec completely ignores leap seconds, so we need to adjust for them
-        let mut tm = timespec.local();
-        assert_eq!(tm.tm_nsec, 0);
-        tm.tm_nsec = utc.nanosecond() as i32;
-
-        tm_to_datetime(tm)
     }
 }
 

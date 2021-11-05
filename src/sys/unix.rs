@@ -9,8 +9,7 @@
 // except according to those terms.
 
 use super::Tm;
-use libc::{self, time_t};
-use std::io;
+use libc;
 use std::mem;
 
 #[cfg(any(target_os = "solaris", target_os = "illumos"))]
@@ -75,32 +74,6 @@ unsafe fn timegm(tm: *mut libc::tm) -> time_t {
     tzset();
 
     ret
-}
-
-pub fn time_to_local_tm(sec: i64, tm: &mut Tm) {
-    unsafe {
-        let sec = sec as time_t;
-        let mut out = mem::zeroed();
-        if libc::localtime_r(&sec, &mut out).is_null() {
-            panic!("localtime_r failed: {}", io::Error::last_os_error());
-        }
-        #[cfg(any(target_os = "solaris", target_os = "illumos"))]
-        let gmtoff = {
-            tzset();
-            // < 0 means we don't know; assume we're not in DST.
-            if out.tm_isdst == 0 {
-                // timezone is seconds west of UTC, tm_gmtoff is seconds east
-                -timezone
-            } else if out.tm_isdst > 0 {
-                -altzone
-            } else {
-                -timezone
-            }
-        };
-        #[cfg(not(any(target_os = "solaris", target_os = "illumos")))]
-        let gmtoff = out.tm_gmtoff;
-        tm_to_rust_tm(&out, gmtoff as i32, tm);
-    }
 }
 
 pub fn utc_tm_to_time(rust_tm: &Tm) -> i64 {
